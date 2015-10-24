@@ -1,0 +1,136 @@
+EVTYPE,EVTYPESTD
+AGRICULTURAL FREEZE,Frost/Freeze
+ASTRONOMICAL HIGH TIDE,Astronomical Low Tide
+BEACH EROSION,Coastal Flood
+BLACK ICE,Winter Weather
+BLOWING DUST,Dust Storm
+BLOWING SNOW,Winter Storm
+BRUSH FIRE,Wildfire
+COASTAL EROSION,Coastal Flood
+COASTAL FLOODING,Coastal Flood
+COASTAL  FLOODING/EROSION,Coastal Flood
+COASTAL FLOODING/EROSION,Coastal Flood
+COASTAL STORM,Marine Thunderstorm Wind
+COASTALSTORM,Marine Thunderstorm Wind
+COLD,Cold/Wind Chill
+COLD AND SNOW,Winter Weather
+COLD TEMPERATURE,Cold/Wind Chill
+COLD WEATHER,Cold/Wind Chill
+DAMAGING FREEZE,Frost/Freeze
+DOWNBURST,Thunderstorm Wind
+DROWNING,HEAVY RAIN
+DRY MICROBURST,Thunderstorm Wind
+EARLY FROST,Frost/Freeze
+EROSION/CSTL FLOOD,Coastal Flood
+EXCESSIVE SNOW,Heavy Snow
+EXTENDED COLD,Extreme Cold/Wind Chill
+EXTREME COLD,Extreme Cold/Wind Chill
+EXTREME WINDCHILL,Extreme Cold/Wind Chill
+FALLING SNOW/ICE,Winter Storm
+FLASH FLOOD/FLOOD,Flash Flood
+FLOOD/FLASH/FLOOD,Flash Flood
+FOG,Dense Fog
+FREEZE,Frost/Freeze
+FREEZING DRIZZLE,Sleet
+FREEZING RAIN,Sleet
+FREEZING SPRAY,Frost/Freeze
+FROST,Frost/Freeze
+GLAZE,Frost/Freeze
+GRADIENT WIND,Strong Wind
+GUSTY WIND,Strong Wind
+GUSTY WIND/HAIL,Hail
+GUSTY WIND/HVY RAIN,Thunderstorm Wind
+GUSTY WIND/RAIN,Thunderstorm Wind
+GUSTY WINDS,Strong Wind
+HARD FREEZE,Frost/Freeze
+HAZARDOUS SURF,Storm Surge/Tide
+HEAT WAVE,Heat
+HEAVY RAIN/HIGH SURF,Storm Surge/Tide
+HEAVY SEAS,Storm Surge/Tide
+HEAVY SNOW SHOWER,Heavy Snow
+HEAVY SURF,Storm Surge/Tide
+HEAVY SURF AND WIND,Storm Surge/Tide
+HEAVY SURF/HIGH SURF,Storm Surge/Tide
+HIGH SEAS,Storm Surge/Tide
+HIGH SURF ADVISORY,Storm Surge/Tide
+HIGH SWELLS,Storm Surge/Tide
+HIGH WATER,Storm Surge/Tide
+HIGH WIND (G40),High Wind
+HIGH WINDS,High Wind
+HURRICANE,Hurricane (Typhoon)
+HURRICANE EDOUARD,Hurricane (Typhoon)
+HURRICANE/TYPHOON,Hurricane (Typhoon)
+HYPERTHERMIA/EXPOSURE,Cold/Wind Chill
+HYPOTHERMIA/EXPOSURE,Cold/Wind Chill
+ICE JAM FLOOD (MINOR,Flood
+ICE ON ROAD,Winter Weather
+ICE ROADS,Winter Weather
+ICY ROADS,Winter Weather
+LAKE EFFECT SNOW,Lake-Effect Snow
+LANDSLIDE,Debris Flow
+LANDSLIDES,Debris Flow
+LANDSLUMP,Debris Flow
+LANDSPOUT,Dust Devil
+LATE SEASON SNOW,Winter Storm
+LIGHT FREEZING RAIN,Sleet
+LIGHT SNOW,Winter Storm
+LIGHT SNOWFALL,Winter Storm
+MARINE ACCIDENT,Storm Surge/Tide
+MARINE TSTM WIND,Marine Thunderstorm Wind
+MICROBURST,Thunderstorm Wind
+MIXED PRECIP,Sleet
+MIXED PRECIPITATION,Sleet
+MUD SLIDE,Debris Flow
+MUDSLIDE,Debris Flow
+MUDSLIDES,Debris Flow
+NON TSTM WIND,High Wind
+NON-SEVERE WIND DAMAGE,High Wind
+NON-TSTM WIND,High Wind
+RAIN/SNOW,Sleet
+RECORD HEAT,Excessive Heat
+RIP CURRENTS,Rip Current
+RIVER FLOOD,Flood
+RIVER FLOODING,Flood
+ROCK SLIDE,Debris Flow
+ROGUE WAVE,High Surf
+ROUGH SEAS,Storm Surge/Tide
+ROUGH SURF,Storm Surge/Tide
+SMALL HAIL,Hail
+SNOW,Winter Storm
+SNOW AND ICE,Winter Storm
+SNOW SQUALL,Winter Storm
+SNOW SQUALLS,Winter Storm
+STORM SURGE,Storm Surge/Tide
+STRONG WINDS,Strong Wind
+THUNDERSTORM,Thunderstorm Wind
+THUNDERSTORM WIND (G40),Thunderstorm Wind
+TIDAL FLOODING,Coastal Flood
+TORRENTIAL RAINFALL,Heavy Rain
+TSTM WIND,Thunderstorm Wind
+TSTM WIND (41),Thunderstorm Wind
+TSTM WIND (G35),Thunderstorm Wind
+TSTM WIND (G40),Thunderstorm Wind
+TSTM WIND  (G45),Thunderstorm Wind
+TSTM WIND (G45),Thunderstorm Wind
+TSTM WIND 40,Thunderstorm Wind
+TSTM WIND 45,Thunderstorm Wind
+TSTM WIND AND LIGHTNING,Thunderstorm Wind
+TSTM WIND G45,Thunderstorm Wind
+TSTM WIND/HAIL,Thunderstorm Wind
+TYPHOON,Hurricane (Typhoon)
+UNSEASONABLE COLD,Cold/Wind Chill
+UNSEASONABLY COLD,Cold/Wind Chill
+UNSEASONABLY WARM,Heat
+UNSEASONAL RAIN,Tropical Depression
+URBAN/SML STREAM FLD,Flood
+WARM WEATHER,Heat
+WET MICROBURST,Thunderstorm Wind
+WHIRLWIND,Dust Devil
+WILD/FOREST FIRE,Wildfire
+WIND,High Wind
+WIND AND WAVE,Marine High Wind
+WIND DAMAGE,High Wind
+WINDS,High Wind
+WINTER WEATHER MIX,Winter Weather
+WINTER WEATHER/MIX,Winter Weather
+WINTRY MIX,Winter Storm
