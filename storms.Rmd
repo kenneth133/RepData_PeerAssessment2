@@ -1,0 +1,267 @@
+---
+title: "The Cost of Weather Events in the United States"
+author: "Kenneth Lee"
+date: "October 25, 2015"
+output: 
+  html_document: 
+    keep_md: yes
+    self_contained: no
+---
+
+## Synopsis
+
+In this analysis, we examined information from the U.S. National Oceanic and Atmospheric Administration's (NOAA) Storm Events Database (from 1996 to 2011) to find the most harmful and most costly weather events.  From these data we found that, on average for each year across the U.S., excessive heat caused the most deaths, tornadoes caused the most injuries, and floods caused the most damage to property and crops.
+
+## Data Processing
+
+From the <a href="http://www.ncdc.noaa.gov/stormevents/">NOAA Severe Weather</a> website we obtained data on storm events across the U.S. gathered by the National Weather Service (NWS) from a variety of sources, which include but are not limited to: county, state, and federal emergency management officials, local law enforcement officials, skywarn spotters, NWS damage surveys, newspaper clipping services, the insurance industry and the general public.  We obtained a <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2">file with data up to 2011</a>.
+
+### Reading in the data
+
+We first read in the data from the raw csv file included in the zip archive.  The data is a comma separated file with missing values coded as blank fields.
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+
+#check if file already exists in working directory
+if(!file.exists("repdata-data-StormData.csv.bz2")) {
+    download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+                  "repdata-data-StormData.csv.bz2")
+}
+
+stormData <- read.csv(bzfile("repdata-data-StormData.csv.bz2"), na.strings="", stringsAsFactors=FALSE)
+```
+
+After reading in the file, we check the table (there are `r formatC(nrow(stormData), format="d", big.mark=",")` rows).
+
+```{r}
+str(stormData)
+```
+
+We notice BGN_DATE column contains strings representing date and time.  The times are all 12:00 AM, so we can discard the time and convert the column to Date type.
+
+```{r}
+stormData$BGN_DATE <- strtrim(stormData$BGN_DATE, nchar(stormData$BGN_DATE)-8) #remove time portion of string
+stormData$BGN_DATE <- as.Date(stormData$BGN_DATE, format="%m/%d/%Y") #convert string to Date
+
+```
+
+### Subsetting the data
+
+The dataset we loaded starts from `r min(stormData$BGN_DATE)` and ends on `r max(stormData$BGN_DATE)`.  As noted by <a href="http://www.ncdc.noaa.gov/stormevents/details.jsp?type=eventtype">NOAA National Climatic Data Center</a>, due to changes in the data collection and processing procedures over time, standardized event types were not implemented until January 1996.  Since we are interested in comparing the destructive nature of storm events in this analysis, we will focus on events that occurred on or after January 1996 and only those events which resulted in fatalities, injuries, property damage, or crop damage.
+
+```{r}
+stormData <- subset(stormData, BGN_DATE >= "1996-01-01") #remove data prior to 1996
+stormData <- subset(stormData, !grepl("^[sS]ummary", EVTYPE)) #remove summary rows which will impact (by double counting) our aggregated metrics later
+stormData <- subset(stormData, FATALITIES!=0 | INJURIES!=0 | PROPDMG!=0 | CROPDMG!=0) #remove rows with 0 fatalities/injuries/damage
+stormData$EVTYPE <- toupper(trimws(stormData$EVTYPE)) #trim whitespace and make all uppercase
+```
+
+### Cleaning event types
+
+We examine the EVTYPE (event type) values to check whether they fall within the 48 standard types as specified in <a href="http://www.ncdc.noaa.gov/stormevents/pd01016005curr.pdf">NWS Directive 10-1605</a>.
+
+```{r}
+unique(stormData$EVTYPE)
+```
+
+We find there are over 130 values which are non-standard.  We create a file with a list of the <a href="https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_std.csv">48 standard event types</a>.  We create another file to <a href="https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_nonstd.csv">map the non-standard values to standard values</a>.  Using thes files, we add a new column EVTYPESTD (event type standard) to our table and map event types to standard event types.
+
+```{r}
+#download event type mapping files from github repo
+if(!file.exists("event_type_std.csv")) {
+    download.file("https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_std.csv",
+                  "event_type_std.csv")
+}
+if(!file.exists("event_type_nonstd.csv")) {
+    download.file("https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_nonstd.csv",
+                  "event_type_nonstd.csv")
+}
+
+eventTypeStd <- read.csv("event_type_std.csv") #read file containing 48 standard event types
+eventTypeStd$EVTYPE <- toupper(eventTypeStd$EVTYPE) #make all uppercase
+eventTypeStd$EVTYPESTD <- eventTypeStd$EVTYPE #add duplicate column
+
+eventTypeNonStd <- read.csv("event_type_nonstd.csv") #read file containing non-standard event types
+eventTypeNonStd$EVTYPE <- toupper(eventTypeNonStd$EVTYPE) #make all uppercase
+eventTypeNonStd$EVTYPESTD <- toupper(eventTypeNonStd$EVTYPESTD) #make all uppercase
+
+eventTypeMap <- rbind(eventTypeStd, eventTypeNonStd) #create combined event map table
+rm(eventTypeStd, eventTypeNonStd) #remove objects no longer needed
+
+stormData <- left_join(stormData, eventTypeMap, by=c("EVTYPE")) #add EVTYPESTD to table
+```
+
+After mapping, we find there are 3 remaining event types which require closer examination.  Examples for "DAM BREAK" are shown.
+
+```{r}
+table(subset(stormData, is.na(EVTYPESTD))$EVTYPE)
+stormData %>% filter(EVTYPE=="DAM BREAK") %>% select(BGN_DATE, REMARKS)
+```
+
+After reading the remarks, update the remaining non-standard events to standard events.
+
+```{r}
+stormData$EVTYPESTD[stormData$EVTYPE=="DAM BREAK" & stormData$BGN_DATE=="1997-05-04"] <- "HEAVY RAIN"
+stormData$EVTYPESTD[stormData$EVTYPE=="DAM BREAK" & stormData$BGN_DATE=="2000-07-17"] <- "FLASH FLOOD"
+stormData$EVTYPESTD[stormData$EVTYPE=="OTHER" & stormData$BGN_DATE=="1997-09-02"] <- "DUST DEVIL"
+stormData$EVTYPESTD[stormData$EVTYPE=="OTHER" & stormData$BGN_DATE=="2000-09-07"] <- "DUST DEVIL"
+stormData$EVTYPESTD[stormData$EVTYPE=="OTHER" & stormData$BGN_DATE=="2001-07-15"] <- "DUST DEVIL"
+stormData$EVTYPESTD[stormData$EVTYPE=="OTHER" & stormData$BGN_DATE=="1996-02-03"] <- "HEAVY SNOW"
+stormData$EVTYPESTD[stormData$EVTYPE=="OTHER" & stormData$BGN_DATE=="1997-05-01"] <- "HEAVY RAIN"
+stormData$EVTYPESTD[stormData$EVTYPE=="RAIN" & stormData$BGN_DATE=="2000-02-23"] <- "HEAVY SNOW"
+stormData$EVTYPESTD[stormData$EVTYPE=="RAIN" & stormData$BGN_DATE=="2000-09-01"] <- "HEAVY RAIN"
+stormData$EVTYPESTD[stormData$EVTYPE=="RAIN" & stormData$BGN_DATE=="2000-12-16"] <- "SLEET"
+```
+
+Check no unmapped events remain.
+
+```{r}
+anyNA(stormData$EVTYPESTD)
+```
+
+Lastly, rename "ASTRONOMICAL LOW TIDE" to "ASTRONOMICAL HIGH/LOW TIDE".  The 48 standard event types include "ASTRONOMICAL LOW TIDE" but there is no corresponding "ASTRONOMICAL HIGH TIDE" despite data to support having such an event.
+
+```{r}
+stormData %>% filter(grepl("^ASTRONOMICAL", EVTYPE)) %>% select(BGN_DATE, EVTYPE, EVTYPESTD)
+stormData$EVTYPESTD[stormData$EVTYPESTD=="ASTRONOMICAL LOW TIDE"] <- "ASTRONOMICAL HIGH/LOW TIDE"
+```
+
+### Inflation adjustment
+
+This analysis spans 15 years of data.  To put the damage estimates in terms of 2015 dollars, we adjust the numbers for inflation using the <a href="https://en.wikipedia.org/wiki/Consumer_price_index">Consumer Price Index (CPI)</a> provided by the <a href="http://data.bls.gov/cgi-bin/surveymost?bls">Bureau of Labor Statistics</a>.  Specifically, we use <a href="https://en.wikipedia.org/wiki/Core_inflation">core inflation</a> which excludes energy and food products which have volatile prices.
+
+```{r}
+#load core_cpi file from github repo
+if(!file.exists("core_cpi.csv")) {
+    download.file("https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/core_cpi.csv",
+                  "core_cpi.csv")
+}
+coreCPI <- read.csv("core_cpi.csv", stringsAsFactors=FALSE, skip=10)
+coreCPI$Date <- as.Date(coreCPI$Date, format="%m/%d/%Y") #convert string to Date
+
+head(coreCPI)
+```
+
+Join CPI data with main table.
+
+```{r}
+coreCPI$Date <- format(coreCPI$Date, "%Y-%m") #convert to yyyy-mm string
+colnames(coreCPI) <- c("YM", "INFL_FACTOR")
+stormData$YM <- format(stormData$BGN_DATE, "%Y-%m") #add column for yyyy-mm string
+stormData <- left_join(stormData, coreCPI, by=c("YM"))
+```
+
+Apply multipliers on damage estimates.
+
+```{r}
+stormData$PROPDMG[stormData$PROPDMGEXP=="K" & !is.na(stormData$PROPDMGEXP)] <- stormData$PROPDMG[stormData$PROPDMGEXP=="K" & !is.na(stormData$PROPDMGEXP)] * 1000
+stormData$PROPDMG[stormData$PROPDMGEXP=="M" & !is.na(stormData$PROPDMGEXP)] <- stormData$PROPDMG[stormData$PROPDMGEXP=="M" & !is.na(stormData$PROPDMGEXP)] * 1000000
+stormData$PROPDMG[stormData$PROPDMGEXP=="B" & !is.na(stormData$PROPDMGEXP)] <- stormData$PROPDMG[stormData$PROPDMGEXP=="B" & !is.na(stormData$PROPDMGEXP)] * 1000000000
+stormData$CROPDMG[stormData$CROPDMGEXP=="K" & !is.na(stormData$CROPDMGEXP)] <- stormData$CROPDMG[stormData$CROPDMGEXP=="K" & !is.na(stormData$CROPDMGEXP)] * 1000
+stormData$CROPDMG[stormData$CROPDMGEXP=="M" & !is.na(stormData$CROPDMGEXP)] <- stormData$CROPDMG[stormData$CROPDMGEXP=="M" & !is.na(stormData$CROPDMGEXP)] * 1000000
+stormData$CROPDMG[stormData$CROPDMGEXP=="B" & !is.na(stormData$CROPDMGEXP)] <- stormData$CROPDMG[stormData$CROPDMGEXP=="B" & !is.na(stormData$CROPDMGEXP)] * 1000000000
+```
+
+Sum property damage and crop damage.
+
+```{r}
+stormData$DMGNOM <- 0.0 #add column for total damage (nominal, not adjusted for inflation)
+stormData$DMGNOM <- stormData$PROPDMG + stormData$CROPDMG
+```
+
+Apply inflation adjustment and convert numbers to represent millions.
+
+```{r}
+stormData$DMGREAL <- stormData$DMGNOM * coreCPI$INFL_FACTOR[coreCPI$YM=="2015-09"] / stormData$INFL_FACTOR
+stormData$DMGREAL <- stormData$DMGREAL / 1000000 #convert to millions
+```
+
+### Impute data for December 2011
+
+In the results of this analysis, we will look at average fatalities, injuries, and damage per event type per year.  However, for the year 2011, we only have data for the first 11 months.  Rather than exclude 2011 data entirely, we will impute data for December 2011 using December averages from previous years.
+
+```{r}
+stormDataDec <- stormData %>% filter(format(BGN_DATE,"%m")=="12") %>% 
+    select(EVTYPESTD,FATALITIES,INJURIES,DMGREAL) %>% group_by(EVTYPESTD) %>%
+    summarize(FATALITIES=mean(FATALITIES), INJURIES=mean(INJURIES), DMGREAL=mean(DMGREAL))
+
+head(stormDataDec)
+```
+
+Integrate into main table.
+
+```{r}
+stormDataDec$BGN_DATE <- as.Date("12/1/2011", format="%m/%d/%Y") #1st of the month is arbitrary
+stormDataDec$YM <- format(stormDataDec$BGN_DATE, "%Y-%m")
+
+stormDataDec <- stormDataDec %>% select(BGN_DATE, YM, EVTYPESTD, FATALITIES, INJURIES, DMGREAL) #reorder columns
+stormData <- stormData %>% select(BGN_DATE, YM, EVTYPESTD, FATALITIES, INJURIES, DMGREAL) #remove columns irrelevant to analysis/results
+
+stormData <- rbind(stormData, stormDataDec) #combine data
+rm(stormDataDec) #remove object no longer needed
+```
+
+### Aggregation
+
+Now with 15 full years of data, we sum fatalities, injuries, and damage by event type for each year.
+
+```{r}
+stormDataByYear <- stormData %>% group_by(YEAR=format(BGN_DATE,"%Y"), EVTYPESTD) %>% 
+    summarize(FATALITIES=sum(FATALITIES), INJURIES=sum(INJURIES), DMGREAL=sum(DMGREAL))
+
+head(stormDataByYear)
+```
+
+Then take the average per year, keeping the top 5 for fatalities, injuries, and damage.
+
+```{r, message=FALSE, warning=FALSE}
+fatalAvg <- stormDataByYear %>% select(EVTYPESTD, FATALITIES) %>% group_by(EVTYPESTD) %>% 
+    summarize(FATALITIES=mean(FATALITIES)) %>% arrange(desc(FATALITIES)) %>% top_n(5)
+injuryAvg <- stormDataByYear %>% select(EVTYPESTD, INJURIES) %>% group_by(EVTYPESTD) %>% 
+    summarize(INJURIES=mean(INJURIES)) %>% arrange(desc(INJURIES)) %>% top_n(5)
+dmgAvg <- stormDataByYear %>% select(EVTYPESTD, DMGREAL) %>% group_by(EVTYPESTD) %>% 
+    summarize(DMGREAL=mean(DMGREAL)) %>% arrange(desc(DMGREAL)) %>% top_n(5)
+
+head(fatalAvg)
+```
+
+Convert EVTYPESTD column to factor.  This is needed to order x-axis of plots later.
+
+```{r}
+fatalAvg$EVTYPESTD <- factor(fatalAvg$EVTYPESTD, levels=fatalAvg$EVTYPESTD)
+injuryAvg$EVTYPESTD <- factor(injuryAvg$EVTYPESTD, levels=injuryAvg$EVTYPESTD)
+dmgAvg$EVTYPESTD <- factor(dmgAvg$EVTYPESTD, levels=dmgAvg$EVTYPESTD)
+```
+
+## Results
+
+### Fatalities
+
+Taking a look at the average number of fatalities each year, we see that excessive heat is the deadliest with `r round(fatalAvg$FATALITIES[1],0)` deaths per year on average.  Tornadoes are a close second with `r round(fatalAvg$FATALITIES[2],0)` deaths and flash floods are a distant third with `r round(fatalAvg$FATALITIES[3],0)` deaths per year on average.
+
+```{r}
+qplot(x=fatalAvg$EVTYPESTD, y=fatalAvg$FATALITIES, geom="bar", stat="identity",
+      xlab="Event", ylab="Avg Deaths per Year")
+```
+
+### Injuries
+
+In terms of injuries, tornadoes are far and away the most dangerous with `r formatC(injuryAvg$INJURIES[1], format="d", big.mark=",")` injuries per year on average.  Floods are in second place with `r round(injuryAvg$INJURIES[2],0)` injuries.
+
+```{r}
+qplot(x=injuryAvg$EVTYPESTD, y=injuryAvg$INJURIES, geom="bar", stat="identity",
+      xlab="Event", ylab="Avg Injuries per Year")
+```
+
+### Damage
+
+Turning to the economic impact of storm events, floods are number one, causing on average $`r round(dmgAvg$DMGREAL[1]/1000, 2)` billion of damage per year.  Hurricanes are second, causing on average $`r round(dmgAvg$DMGREAL[2]/1000, 2)` billion of damage per year.  Interestingly, the top three events are all water-based.
+
+```{r}
+qplot(x=dmgAvg$EVTYPESTD, y=dmgAvg$DMGREAL, geom="bar", stat="identity",
+      xlab="Event", ylab="Avg Cost of Damage per Year ($ millions)")
+```
+
+In summary, excessive heat is the most deadly, tornadoes are the most dangerous, and floods are the most damaging to property and crops each year in the United States on average.

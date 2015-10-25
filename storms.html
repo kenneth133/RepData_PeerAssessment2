@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="author" content="Kenneth Lee" />
+
+<meta name="date" content="2015-10-25" />
+
+<title>The Cost of Weather Events in the United States</title>
+
+<script src="storms_files/jquery-1.11.0/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="storms_files/bootstrap-3.3.1/css/bootstrap.min.css" rel="stylesheet" />
+<script src="storms_files/bootstrap-3.3.1/js/bootstrap.min.js"></script>
+<script src="storms_files/bootstrap-3.3.1/shim/html5shiv.min.js"></script>
+<script src="storms_files/bootstrap-3.3.1/shim/respond.min.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<link rel="stylesheet"
+      href="storms_files/highlight/default.css"
+      type="text/css" />
+<script src="storms_files/highlight/highlight.js"></script>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}
+</style>
+<div class="container-fluid main-container">
+
+
+<div id="header">
+<h1 class="title">The Cost of Weather Events in the United States</h1>
+<h4 class="author"><em>Kenneth Lee</em></h4>
+<h4 class="date"><em>October 25, 2015</em></h4>
+</div>
+
+
+<div id="synopsis" class="section level2">
+<h2>Synopsis</h2>
+<p>In this analysis, we examined information from the U.S. National Oceanic and Atmospheric Administration’s (NOAA) Storm Events Database (from 1996 to 2011) to find the most harmful and most costly weather events. From these data we found that, on average for each year across the U.S., excessive heat caused the most deaths, tornadoes caused the most injuries, and floods caused the most damage to property and crops.</p>
+</div>
+<div id="data-processing" class="section level2">
+<h2>Data Processing</h2>
+<p>From the <a href="http://www.ncdc.noaa.gov/stormevents/">NOAA Severe Weather</a> website we obtained data on storm events across the U.S. gathered by the National Weather Service (NWS) from a variety of sources, which include but are not limited to: county, state, and federal emergency management officials, local law enforcement officials, skywarn spotters, NWS damage surveys, newspaper clipping services, the insurance industry and the general public. We obtained a <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2">file with data up to 2011</a>.</p>
+<div id="reading-in-the-data" class="section level3">
+<h3>Reading in the data</h3>
+<p>We first read in the data from the raw csv file included in the zip archive. The data is a comma separated file with missing values coded as blank fields.</p>
+<pre class="r"><code>library(dplyr)
+library(ggplot2)
+
+#check if file already exists in working directory
+if(!file.exists(&quot;repdata-data-StormData.csv.bz2&quot;)) {
+    download.file(&quot;https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2&quot;,
+                  &quot;repdata-data-StormData.csv.bz2&quot;)
+}
+
+stormData &lt;- read.csv(bzfile(&quot;repdata-data-StormData.csv.bz2&quot;), na.strings=&quot;&quot;, stringsAsFactors=FALSE)</code></pre>
+<p>After reading in the file, we check the table (there are 902,297 rows).</p>
+<pre class="r"><code>str(stormData)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    902297 obs. of  37 variables:
+##  $ STATE__   : num  1 1 1 1 1 1 1 1 1 1 ...
+##  $ BGN_DATE  : chr  &quot;4/18/1950 0:00:00&quot; &quot;4/18/1950 0:00:00&quot; &quot;2/20/1951 0:00:00&quot; &quot;6/8/1951 0:00:00&quot; ...
+##  $ BGN_TIME  : chr  &quot;0130&quot; &quot;0145&quot; &quot;1600&quot; &quot;0900&quot; ...
+##  $ TIME_ZONE : chr  &quot;CST&quot; &quot;CST&quot; &quot;CST&quot; &quot;CST&quot; ...
+##  $ COUNTY    : num  97 3 57 89 43 77 9 123 125 57 ...
+##  $ COUNTYNAME: chr  &quot;MOBILE&quot; &quot;BALDWIN&quot; &quot;FAYETTE&quot; &quot;MADISON&quot; ...
+##  $ STATE     : chr  &quot;AL&quot; &quot;AL&quot; &quot;AL&quot; &quot;AL&quot; ...
+##  $ EVTYPE    : chr  &quot;TORNADO&quot; &quot;TORNADO&quot; &quot;TORNADO&quot; &quot;TORNADO&quot; ...
+##  $ BGN_RANGE : num  0 0 0 0 0 0 0 0 0 0 ...
+##  $ BGN_AZI   : chr  NA NA NA NA ...
+##  $ BGN_LOCATI: chr  NA NA NA NA ...
+##  $ END_DATE  : chr  NA NA NA NA ...
+##  $ END_TIME  : chr  NA NA NA NA ...
+##  $ COUNTY_END: num  0 0 0 0 0 0 0 0 0 0 ...
+##  $ COUNTYENDN: logi  NA NA NA NA NA NA ...
+##  $ END_RANGE : num  0 0 0 0 0 0 0 0 0 0 ...
+##  $ END_AZI   : chr  NA NA NA NA ...
+##  $ END_LOCATI: chr  NA NA NA NA ...
+##  $ LENGTH    : num  14 2 0.1 0 0 1.5 1.5 0 3.3 2.3 ...
+##  $ WIDTH     : num  100 150 123 100 150 177 33 33 100 100 ...
+##  $ F         : int  3 2 2 2 2 2 2 1 3 3 ...
+##  $ MAG       : num  0 0 0 0 0 0 0 0 0 0 ...
+##  $ FATALITIES: num  0 0 0 0 0 0 0 0 1 0 ...
+##  $ INJURIES  : num  15 0 2 2 2 6 1 0 14 0 ...
+##  $ PROPDMG   : num  25 2.5 25 2.5 2.5 2.5 2.5 2.5 25 25 ...
+##  $ PROPDMGEXP: chr  &quot;K&quot; &quot;K&quot; &quot;K&quot; &quot;K&quot; ...
+##  $ CROPDMG   : num  0 0 0 0 0 0 0 0 0 0 ...
+##  $ CROPDMGEXP: chr  NA NA NA NA ...
+##  $ WFO       : chr  NA NA NA NA ...
+##  $ STATEOFFIC: chr  NA NA NA NA ...
+##  $ ZONENAMES : chr  NA NA NA NA ...
+##  $ LATITUDE  : num  3040 3042 3340 3458 3412 ...
+##  $ LONGITUDE : num  8812 8755 8742 8626 8642 ...
+##  $ LATITUDE_E: num  3051 0 0 0 0 ...
+##  $ LONGITUDE_: num  8806 0 0 0 0 ...
+##  $ REMARKS   : chr  NA NA NA NA ...
+##  $ REFNUM    : num  1 2 3 4 5 6 7 8 9 10 ...</code></pre>
+<p>We notice BGN_DATE column contains strings representing date and time. The times are all 12:00 AM, so we can discard the time and convert the column to Date type.</p>
+<pre class="r"><code>stormData$BGN_DATE &lt;- strtrim(stormData$BGN_DATE, nchar(stormData$BGN_DATE)-8) #remove time portion of string
+stormData$BGN_DATE &lt;- as.Date(stormData$BGN_DATE, format=&quot;%m/%d/%Y&quot;) #convert string to Date</code></pre>
+</div>
+<div id="subsetting-the-data" class="section level3">
+<h3>Subsetting the data</h3>
+<p>The dataset we loaded starts from 1950-01-03 and ends on 2011-11-30. As noted by <a href="http://www.ncdc.noaa.gov/stormevents/details.jsp?type=eventtype">NOAA National Climatic Data Center</a>, due to changes in the data collection and processing procedures over time, standardized event types were not implemented until January 1996. Since we are interested in comparing the destructive nature of storm events in this analysis, we will focus on events that occurred on or after January 1996 and only those events which resulted in fatalities, injuries, property damage, or crop damage.</p>
+<pre class="r"><code>stormData &lt;- subset(stormData, BGN_DATE &gt;= &quot;1996-01-01&quot;) #remove data prior to 1996
+stormData &lt;- subset(stormData, !grepl(&quot;^[sS]ummary&quot;, EVTYPE)) #remove summary rows which will impact (by double counting) our aggregated metrics later
+stormData &lt;- subset(stormData, FATALITIES!=0 | INJURIES!=0 | PROPDMG!=0 | CROPDMG!=0) #remove rows with 0 fatalities/injuries/damage
+stormData$EVTYPE &lt;- toupper(trimws(stormData$EVTYPE)) #trim whitespace and make all uppercase</code></pre>
+</div>
+<div id="cleaning-event-types" class="section level3">
+<h3>Cleaning event types</h3>
+<p>We examine the EVTYPE (event type) values to check whether they fall within the 48 standard types as specified in <a href="http://www.ncdc.noaa.gov/stormevents/pd01016005curr.pdf">NWS Directive 10-1605</a>.</p>
+<pre class="r"><code>unique(stormData$EVTYPE)</code></pre>
+<pre><code>##   [1] &quot;WINTER STORM&quot;              &quot;TORNADO&quot;                  
+##   [3] &quot;TSTM WIND&quot;                 &quot;HIGH WIND&quot;                
+##   [5] &quot;FLASH FLOOD&quot;               &quot;FREEZING RAIN&quot;            
+##   [7] &quot;EXTREME COLD&quot;              &quot;LIGHTNING&quot;                
+##   [9] &quot;HAIL&quot;                      &quot;FLOOD&quot;                    
+##  [11] &quot;TSTM WIND/HAIL&quot;            &quot;EXCESSIVE HEAT&quot;           
+##  [13] &quot;RIP CURRENTS&quot;              &quot;OTHER&quot;                    
+##  [15] &quot;HEAVY SNOW&quot;                &quot;WILD/FOREST FIRE&quot;         
+##  [17] &quot;ICE STORM&quot;                 &quot;BLIZZARD&quot;                 
+##  [19] &quot;STORM SURGE&quot;               &quot;ICE JAM FLOOD (MINOR&quot;     
+##  [21] &quot;DUST STORM&quot;                &quot;STRONG WIND&quot;              
+##  [23] &quot;DUST DEVIL&quot;                &quot;URBAN/SML STREAM FLD&quot;     
+##  [25] &quot;FOG&quot;                       &quot;ROUGH SURF&quot;               
+##  [27] &quot;HEAVY SURF&quot;                &quot;HEAVY RAIN&quot;               
+##  [29] &quot;MARINE ACCIDENT&quot;           &quot;AVALANCHE&quot;                
+##  [31] &quot;FREEZE&quot;                    &quot;DRY MICROBURST&quot;           
+##  [33] &quot;WINDS&quot;                     &quot;COASTAL STORM&quot;            
+##  [35] &quot;EROSION/CSTL FLOOD&quot;        &quot;RIVER FLOODING&quot;           
+##  [37] &quot;WATERSPOUT&quot;                &quot;DAMAGING FREEZE&quot;          
+##  [39] &quot;HURRICANE&quot;                 &quot;TROPICAL STORM&quot;           
+##  [41] &quot;BEACH EROSION&quot;             &quot;HIGH SURF&quot;                
+##  [43] &quot;HEAVY RAIN/HIGH SURF&quot;      &quot;UNSEASONABLE COLD&quot;        
+##  [45] &quot;EARLY FROST&quot;               &quot;WINTRY MIX&quot;               
+##  [47] &quot;DROUGHT&quot;                   &quot;COASTAL FLOODING&quot;         
+##  [49] &quot;TORRENTIAL RAINFALL&quot;       &quot;LANDSLUMP&quot;                
+##  [51] &quot;HURRICANE EDOUARD&quot;         &quot;TIDAL FLOODING&quot;           
+##  [53] &quot;STRONG WINDS&quot;              &quot;EXTREME WINDCHILL&quot;        
+##  [55] &quot;GLAZE&quot;                     &quot;EXTENDED COLD&quot;            
+##  [57] &quot;WHIRLWIND&quot;                 &quot;HEAVY SNOW SHOWER&quot;        
+##  [59] &quot;LIGHT SNOW&quot;                &quot;COASTAL FLOOD&quot;            
+##  [61] &quot;MIXED PRECIP&quot;              &quot;COLD&quot;                     
+##  [63] &quot;FREEZING SPRAY&quot;            &quot;DOWNBURST&quot;                
+##  [65] &quot;MUDSLIDES&quot;                 &quot;MICROBURST&quot;               
+##  [67] &quot;MUDSLIDE&quot;                  &quot;SNOW&quot;                     
+##  [69] &quot;SNOW SQUALLS&quot;              &quot;WIND DAMAGE&quot;              
+##  [71] &quot;LIGHT SNOWFALL&quot;            &quot;FREEZING DRIZZLE&quot;         
+##  [73] &quot;GUSTY WIND/RAIN&quot;           &quot;GUSTY WIND/HVY RAIN&quot;      
+##  [75] &quot;WIND&quot;                      &quot;COLD TEMPERATURE&quot;         
+##  [77] &quot;HEAT WAVE&quot;                 &quot;COLD AND SNOW&quot;            
+##  [79] &quot;RAIN/SNOW&quot;                 &quot;TSTM WIND (G45)&quot;          
+##  [81] &quot;GUSTY WINDS&quot;               &quot;GUSTY WIND&quot;               
+##  [83] &quot;TSTM WIND 40&quot;              &quot;TSTM WIND 45&quot;             
+##  [85] &quot;HARD FREEZE&quot;               &quot;TSTM WIND (41)&quot;           
+##  [87] &quot;HEAT&quot;                      &quot;RIVER FLOOD&quot;              
+##  [89] &quot;TSTM WIND (G40)&quot;           &quot;RIP CURRENT&quot;              
+##  [91] &quot;MUD SLIDE&quot;                 &quot;FROST/FREEZE&quot;             
+##  [93] &quot;SNOW AND ICE&quot;              &quot;AGRICULTURAL FREEZE&quot;      
+##  [95] &quot;WINTER WEATHER&quot;            &quot;SNOW SQUALL&quot;              
+##  [97] &quot;ICY ROADS&quot;                 &quot;THUNDERSTORM&quot;             
+##  [99] &quot;HYPOTHERMIA/EXPOSURE&quot;      &quot;LAKE EFFECT SNOW&quot;         
+## [101] &quot;MIXED PRECIPITATION&quot;       &quot;BLACK ICE&quot;                
+## [103] &quot;COASTALSTORM&quot;              &quot;DAM BREAK&quot;                
+## [105] &quot;BLOWING SNOW&quot;              &quot;FROST&quot;                    
+## [107] &quot;GRADIENT WIND&quot;             &quot;UNSEASONABLY COLD&quot;        
+## [109] &quot;TSTM WIND AND LIGHTNING&quot;   &quot;WET MICROBURST&quot;           
+## [111] &quot;HEAVY SURF AND WIND&quot;       &quot;FUNNEL CLOUD&quot;             
+## [113] &quot;TYPHOON&quot;                   &quot;LANDSLIDES&quot;               
+## [115] &quot;HIGH SWELLS&quot;               &quot;HIGH WINDS&quot;               
+## [117] &quot;SMALL HAIL&quot;                &quot;UNSEASONAL RAIN&quot;          
+## [119] &quot;COASTAL FLOODING/EROSION&quot;  &quot;TSTM WIND  (G45)&quot;         
+## [121] &quot;HIGH WIND (G40)&quot;           &quot;TSTM WIND (G35)&quot;          
+## [123] &quot;COASTAL EROSION&quot;           &quot;UNSEASONABLY WARM&quot;        
+## [125] &quot;SEICHE&quot;                    &quot;COASTAL  FLOODING/EROSION&quot;
+## [127] &quot;HYPERTHERMIA/EXPOSURE&quot;     &quot;ROCK SLIDE&quot;               
+## [129] &quot;GUSTY WIND/HAIL&quot;           &quot;HEAVY SEAS&quot;               
+## [131] &quot;LANDSPOUT&quot;                 &quot;RECORD HEAT&quot;              
+## [133] &quot;EXCESSIVE SNOW&quot;            &quot;FLOOD/FLASH/FLOOD&quot;        
+## [135] &quot;WIND AND WAVE&quot;             &quot;FLASH FLOOD/FLOOD&quot;        
+## [137] &quot;LIGHT FREEZING RAIN&quot;       &quot;ICE ROADS&quot;                
+## [139] &quot;HIGH SEAS&quot;                 &quot;RAIN&quot;                     
+## [141] &quot;ROUGH SEAS&quot;                &quot;TSTM WIND G45&quot;            
+## [143] &quot;NON-SEVERE WIND DAMAGE&quot;    &quot;WARM WEATHER&quot;             
+## [145] &quot;THUNDERSTORM WIND (G40)&quot;   &quot;LANDSLIDE&quot;                
+## [147] &quot;HIGH WATER&quot;                &quot;LATE SEASON SNOW&quot;         
+## [149] &quot;WINTER WEATHER MIX&quot;        &quot;ROGUE WAVE&quot;               
+## [151] &quot;FALLING SNOW/ICE&quot;          &quot;NON-TSTM WIND&quot;            
+## [153] &quot;NON TSTM WIND&quot;             &quot;BRUSH FIRE&quot;               
+## [155] &quot;BLOWING DUST&quot;              &quot;VOLCANIC ASH&quot;             
+## [157] &quot;HIGH SURF ADVISORY&quot;        &quot;HAZARDOUS SURF&quot;           
+## [159] &quot;WILDFIRE&quot;                  &quot;COLD WEATHER&quot;             
+## [161] &quot;ICE ON ROAD&quot;               &quot;DROWNING&quot;                 
+## [163] &quot;EXTREME COLD/WIND CHILL&quot;   &quot;MARINE TSTM WIND&quot;         
+## [165] &quot;HURRICANE/TYPHOON&quot;         &quot;DENSE FOG&quot;                
+## [167] &quot;WINTER WEATHER/MIX&quot;        &quot;ASTRONOMICAL HIGH TIDE&quot;   
+## [169] &quot;HEAVY SURF/HIGH SURF&quot;      &quot;TROPICAL DEPRESSION&quot;      
+## [171] &quot;LAKE-EFFECT SNOW&quot;          &quot;MARINE HIGH WIND&quot;         
+## [173] &quot;THUNDERSTORM WIND&quot;         &quot;TSUNAMI&quot;                  
+## [175] &quot;STORM SURGE/TIDE&quot;          &quot;COLD/WIND CHILL&quot;          
+## [177] &quot;LAKESHORE FLOOD&quot;           &quot;MARINE THUNDERSTORM WIND&quot; 
+## [179] &quot;MARINE STRONG WIND&quot;        &quot;ASTRONOMICAL LOW TIDE&quot;    
+## [181] &quot;DENSE SMOKE&quot;               &quot;MARINE HAIL&quot;              
+## [183] &quot;FREEZING FOG&quot;</code></pre>
+<p>We find there are over 130 values which are non-standard. We create a file with a list of the <a href="https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_std.csv">48 standard event types</a>. We create another file to <a href="https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_nonstd.csv">map the non-standard values to standard values</a>. Using thes files, we add a new column EVTYPESTD (event type standard) to our table and map event types to standard event types.</p>
+<pre class="r"><code>#download event type mapping files from github repo
+if(!file.exists(&quot;event_type_std.csv&quot;)) {
+    download.file(&quot;https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_std.csv&quot;,
+                  &quot;event_type_std.csv&quot;)
+}
+if(!file.exists(&quot;event_type_nonstd.csv&quot;)) {
+    download.file(&quot;https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/event_type_nonstd.csv&quot;,
+                  &quot;event_type_nonstd.csv&quot;)
+}
+
+eventTypeStd &lt;- read.csv(&quot;event_type_std.csv&quot;) #read file containing 48 standard event types
+eventTypeStd$EVTYPE &lt;- toupper(eventTypeStd$EVTYPE) #make all uppercase
+eventTypeStd$EVTYPESTD &lt;- eventTypeStd$EVTYPE #add duplicate column
+
+eventTypeNonStd &lt;- read.csv(&quot;event_type_nonstd.csv&quot;) #read file containing non-standard event types
+eventTypeNonStd$EVTYPE &lt;- toupper(eventTypeNonStd$EVTYPE) #make all uppercase
+eventTypeNonStd$EVTYPESTD &lt;- toupper(eventTypeNonStd$EVTYPESTD) #make all uppercase
+
+eventTypeMap &lt;- rbind(eventTypeStd, eventTypeNonStd) #create combined event map table
+rm(eventTypeStd, eventTypeNonStd) #remove objects no longer needed
+
+stormData &lt;- left_join(stormData, eventTypeMap, by=c(&quot;EVTYPE&quot;)) #add EVTYPESTD to table</code></pre>
+<p>After mapping, we find there are 3 remaining event types which require closer examination. Examples for “DAM BREAK” are shown.</p>
+<pre class="r"><code>table(subset(stormData, is.na(EVTYPESTD))$EVTYPE)</code></pre>
+<pre><code>## 
+## DAM BREAK     OTHER      RAIN 
+##         2        34         3</code></pre>
+<pre class="r"><code>stormData %&gt;% filter(EVTYPE==&quot;DAM BREAK&quot;) %&gt;% select(BGN_DATE, REMARKS)</code></pre>
+<pre><code>##     BGN_DATE
+## 1 1997-05-04
+## 2 2000-07-17
+##                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 REMARKS
+## 1                                                                                                                                                                                                                                                                                                                                                                               A small dam on a 3 acre lake broke following several heavy rain episodes. Flooding was not severe but caused some damage to roads and resulted in the loss of a large number of fish.\n
+## 2 A dam on Tibbetts Pond failed from the combined effects of beavers blocking the outlet pipe and 3 to 5 inches of rain.  The dam, 100 ft long, 6 ft high, and 30 ft wide at the base, failed at about 3 am, causing water to flood Route 16.  A car driven on Route 16 by a 32-year-old man was swept away by the 8-ft wall of water which accompanied the flash flood; fortunately the man survived.  A 900 ft section of Route 16 was washed away by the flood waters; the water cut channels as deep as 20 ft.  Damage was estimated at about 1 million dollars.</code></pre>
+<p>After reading the remarks, update the remaining non-standard events to standard events.</p>
+<pre class="r"><code>stormData$EVTYPESTD[stormData$EVTYPE==&quot;DAM BREAK&quot; &amp; stormData$BGN_DATE==&quot;1997-05-04&quot;] &lt;- &quot;HEAVY RAIN&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;DAM BREAK&quot; &amp; stormData$BGN_DATE==&quot;2000-07-17&quot;] &lt;- &quot;FLASH FLOOD&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;OTHER&quot; &amp; stormData$BGN_DATE==&quot;1997-09-02&quot;] &lt;- &quot;DUST DEVIL&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;OTHER&quot; &amp; stormData$BGN_DATE==&quot;2000-09-07&quot;] &lt;- &quot;DUST DEVIL&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;OTHER&quot; &amp; stormData$BGN_DATE==&quot;2001-07-15&quot;] &lt;- &quot;DUST DEVIL&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;OTHER&quot; &amp; stormData$BGN_DATE==&quot;1996-02-03&quot;] &lt;- &quot;HEAVY SNOW&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;OTHER&quot; &amp; stormData$BGN_DATE==&quot;1997-05-01&quot;] &lt;- &quot;HEAVY RAIN&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;RAIN&quot; &amp; stormData$BGN_DATE==&quot;2000-02-23&quot;] &lt;- &quot;HEAVY SNOW&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;RAIN&quot; &amp; stormData$BGN_DATE==&quot;2000-09-01&quot;] &lt;- &quot;HEAVY RAIN&quot;
+stormData$EVTYPESTD[stormData$EVTYPE==&quot;RAIN&quot; &amp; stormData$BGN_DATE==&quot;2000-12-16&quot;] &lt;- &quot;SLEET&quot;</code></pre>
+<p>Check no unmapped events remain.</p>
+<pre class="r"><code>anyNA(stormData$EVTYPESTD)</code></pre>
+<pre><code>## [1] FALSE</code></pre>
+<p>Lastly, rename “ASTRONOMICAL LOW TIDE” to “ASTRONOMICAL HIGH/LOW TIDE”. The 48 standard event types include “ASTRONOMICAL LOW TIDE” but there is no corresponding “ASTRONOMICAL HIGH TIDE” despite data to support having such an event.</p>
+<pre class="r"><code>stormData %&gt;% filter(grepl(&quot;^ASTRONOMICAL&quot;, EVTYPE)) %&gt;% select(BGN_DATE, EVTYPE, EVTYPESTD)</code></pre>
+<pre><code>##      BGN_DATE                 EVTYPE             EVTYPESTD
+## 1  2003-02-17 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 2  2003-02-17 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 3  2003-01-02 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 4  2004-09-06 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 5  2005-01-08 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 6  2005-01-08 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 7  2005-01-09 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 8  2005-01-11 ASTRONOMICAL HIGH TIDE ASTRONOMICAL LOW TIDE
+## 9  2007-12-22  ASTRONOMICAL LOW TIDE ASTRONOMICAL LOW TIDE
+## 10 2008-06-10  ASTRONOMICAL LOW TIDE ASTRONOMICAL LOW TIDE</code></pre>
+<pre class="r"><code>stormData$EVTYPESTD[stormData$EVTYPESTD==&quot;ASTRONOMICAL LOW TIDE&quot;] &lt;- &quot;ASTRONOMICAL HIGH/LOW TIDE&quot;</code></pre>
+</div>
+<div id="inflation-adjustment" class="section level3">
+<h3>Inflation adjustment</h3>
+<p>This analysis spans 15 years of data. To put the damage estimates in terms of 2015 dollars, we adjust the numbers for inflation using the <a href="https://en.wikipedia.org/wiki/Consumer_price_index">Consumer Price Index (CPI)</a> provided by the <a href="http://data.bls.gov/cgi-bin/surveymost?bls">Bureau of Labor Statistics</a>. Specifically, we use <a href="https://en.wikipedia.org/wiki/Core_inflation">core inflation</a> which excludes energy and food products which have volatile prices.</p>
+<pre class="r"><code>#load core_cpi file from github repo
+if(!file.exists(&quot;core_cpi.csv&quot;)) {
+    download.file(&quot;https://github.com/m00shu/RepData_PeerAssessment2/blob/bfa6cb8769fd9c44fdbec50dd791a8da30c189ef/core_cpi.csv&quot;,
+                  &quot;core_cpi.csv&quot;)
+}
+coreCPI &lt;- read.csv(&quot;core_cpi.csv&quot;, stringsAsFactors=FALSE, skip=10)
+coreCPI$Date &lt;- as.Date(coreCPI$Date, format=&quot;%m/%d/%Y&quot;) #convert string to Date
+
+head(coreCPI)</code></pre>
+<pre><code>##         Date Price
+## 1 1996-01-01 163.4
+## 2 1996-02-01 164.2
+## 3 1996-03-01 164.9
+## 4 1996-04-01 165.0
+## 5 1996-05-01 165.1
+## 6 1996-06-01 165.2</code></pre>
+<p>Join CPI data with main table.</p>
+<pre class="r"><code>coreCPI$Date &lt;- format(coreCPI$Date, &quot;%Y-%m&quot;) #convert to yyyy-mm string
+colnames(coreCPI) &lt;- c(&quot;YM&quot;, &quot;INFL_FACTOR&quot;)
+stormData$YM &lt;- format(stormData$BGN_DATE, &quot;%Y-%m&quot;) #add column for yyyy-mm string
+stormData &lt;- left_join(stormData, coreCPI, by=c(&quot;YM&quot;))</code></pre>
+<p>Apply multipliers on damage estimates.</p>
+<pre class="r"><code>stormData$PROPDMG[stormData$PROPDMGEXP==&quot;K&quot; &amp; !is.na(stormData$PROPDMGEXP)] &lt;- stormData$PROPDMG[stormData$PROPDMGEXP==&quot;K&quot; &amp; !is.na(stormData$PROPDMGEXP)] * 1000
+stormData$PROPDMG[stormData$PROPDMGEXP==&quot;M&quot; &amp; !is.na(stormData$PROPDMGEXP)] &lt;- stormData$PROPDMG[stormData$PROPDMGEXP==&quot;M&quot; &amp; !is.na(stormData$PROPDMGEXP)] * 1000000
+stormData$PROPDMG[stormData$PROPDMGEXP==&quot;B&quot; &amp; !is.na(stormData$PROPDMGEXP)] &lt;- stormData$PROPDMG[stormData$PROPDMGEXP==&quot;B&quot; &amp; !is.na(stormData$PROPDMGEXP)] * 1000000000
+stormData$CROPDMG[stormData$CROPDMGEXP==&quot;K&quot; &amp; !is.na(stormData$CROPDMGEXP)] &lt;- stormData$CROPDMG[stormData$CROPDMGEXP==&quot;K&quot; &amp; !is.na(stormData$CROPDMGEXP)] * 1000
+stormData$CROPDMG[stormData$CROPDMGEXP==&quot;M&quot; &amp; !is.na(stormData$CROPDMGEXP)] &lt;- stormData$CROPDMG[stormData$CROPDMGEXP==&quot;M&quot; &amp; !is.na(stormData$CROPDMGEXP)] * 1000000
+stormData$CROPDMG[stormData$CROPDMGEXP==&quot;B&quot; &amp; !is.na(stormData$CROPDMGEXP)] &lt;- stormData$CROPDMG[stormData$CROPDMGEXP==&quot;B&quot; &amp; !is.na(stormData$CROPDMGEXP)] * 1000000000</code></pre>
+<p>Sum property damage and crop damage.</p>
+<pre class="r"><code>stormData$DMGNOM &lt;- 0.0 #add column for total damage (nominal, not adjusted for inflation)
+stormData$DMGNOM &lt;- stormData$PROPDMG + stormData$CROPDMG</code></pre>
+<p>Apply inflation adjustment and convert numbers to represent millions.</p>
+<pre class="r"><code>stormData$DMGREAL &lt;- stormData$DMGNOM * coreCPI$INFL_FACTOR[coreCPI$YM==&quot;2015-09&quot;] / stormData$INFL_FACTOR
+stormData$DMGREAL &lt;- stormData$DMGREAL / 1000000 #convert to millions</code></pre>
+</div>
+<div id="impute-data-for-december-2011" class="section level3">
+<h3>Impute data for December 2011</h3>
+<p>In the results of this analysis, we will look at average fatalities, injuries, and damage per event type per year. However, for the year 2011, we only have data for the first 11 months. Rather than exclude 2011 data entirely, we will impute data for December 2011 using December averages from previous years.</p>
+<pre class="r"><code>stormDataDec &lt;- stormData %&gt;% filter(format(BGN_DATE,&quot;%m&quot;)==&quot;12&quot;) %&gt;% 
+    select(EVTYPESTD,FATALITIES,INJURIES,DMGREAL) %&gt;% group_by(EVTYPESTD) %&gt;%
+    summarize(FATALITIES=mean(FATALITIES), INJURIES=mean(INJURIES), DMGREAL=mean(DMGREAL))
+
+head(stormDataDec)</code></pre>
+<pre><code>## Source: local data frame [6 x 4]
+## 
+##                    EVTYPESTD FATALITIES   INJURIES      DMGREAL
+##                        (chr)      (dbl)      (dbl)        (dbl)
+## 1 ASTRONOMICAL HIGH/LOW TIDE  0.0000000 0.00000000 0.1375194485
+## 2                  AVALANCHE  0.9230769 0.59615385 0.0006528568
+## 3                   BLIZZARD  0.1914894 0.25531915 0.2731506240
+## 4              COASTAL FLOOD  0.0000000 0.05263158 1.9990875679
+## 5            COLD/WIND CHILL  1.3666667 0.00000000 0.0232035660
+## 6                DEBRIS FLOW  0.5172414 0.37931034 3.4539386063</code></pre>
+<p>Integrate into main table.</p>
+<pre class="r"><code>stormDataDec$BGN_DATE &lt;- as.Date(&quot;12/1/2011&quot;, format=&quot;%m/%d/%Y&quot;) #1st of the month is arbitrary
+stormDataDec$YM &lt;- format(stormDataDec$BGN_DATE, &quot;%Y-%m&quot;)
+
+stormDataDec &lt;- stormDataDec %&gt;% select(BGN_DATE, YM, EVTYPESTD, FATALITIES, INJURIES, DMGREAL) #reorder columns
+stormData &lt;- stormData %&gt;% select(BGN_DATE, YM, EVTYPESTD, FATALITIES, INJURIES, DMGREAL) #remove columns irrelevant to analysis/results
+
+stormData &lt;- rbind(stormData, stormDataDec) #combine data
+rm(stormDataDec) #remove object no longer needed</code></pre>
+</div>
+<div id="aggregation" class="section level3">
+<h3>Aggregation</h3>
+<p>Now with 15 full years of data, we sum fatalities, injuries, and damage by event type for each year.</p>
+<pre class="r"><code>stormDataByYear &lt;- stormData %&gt;% group_by(YEAR=format(BGN_DATE,&quot;%Y&quot;), EVTYPESTD) %&gt;% 
+    summarize(FATALITIES=sum(FATALITIES), INJURIES=sum(INJURIES), DMGREAL=sum(DMGREAL))
+
+head(stormDataByYear)</code></pre>
+<pre><code>## Source: local data frame [6 x 5]
+## Groups: YEAR [1]
+## 
+##    YEAR       EVTYPESTD FATALITIES INJURIES    DMGREAL
+##   (chr)           (chr)      (dbl)    (dbl)      (dbl)
+## 1  1996       AVALANCHE          5        5  0.0000000
+## 2  1996        BLIZZARD         23      170 60.6866845
+## 3  1996   COASTAL FLOOD          2        1 81.2276925
+## 4  1996 COLD/WIND CHILL          5        0  7.5174494
+## 5  1996     DEBRIS FLOW          1        2  0.8406947
+## 6  1996       DENSE FOG          2       42  1.5239335</code></pre>
+<p>Then take the average per year, keeping the top 5 for fatalities, injuries, and damage.</p>
+<pre class="r"><code>fatalAvg &lt;- stormDataByYear %&gt;% select(EVTYPESTD, FATALITIES) %&gt;% group_by(EVTYPESTD) %&gt;% 
+    summarize(FATALITIES=mean(FATALITIES)) %&gt;% arrange(desc(FATALITIES)) %&gt;% top_n(5)
+injuryAvg &lt;- stormDataByYear %&gt;% select(EVTYPESTD, INJURIES) %&gt;% group_by(EVTYPESTD) %&gt;% 
+    summarize(INJURIES=mean(INJURIES)) %&gt;% arrange(desc(INJURIES)) %&gt;% top_n(5)
+dmgAvg &lt;- stormDataByYear %&gt;% select(EVTYPESTD, DMGREAL) %&gt;% group_by(EVTYPESTD) %&gt;% 
+    summarize(DMGREAL=mean(DMGREAL)) %&gt;% arrange(desc(DMGREAL)) %&gt;% top_n(5)
+
+head(fatalAvg)</code></pre>
+<pre><code>## Source: local data frame [5 x 2]
+## 
+##        EVTYPESTD FATALITIES
+##            (chr)      (dbl)
+## 1 EXCESSIVE HEAT  112.43750
+## 2        TORNADO   94.44344
+## 3    FLASH FLOOD   55.43935
+## 4      LIGHTNING   40.69034
+## 5    RIP CURRENT   33.92188</code></pre>
+<p>Convert EVTYPESTD column to factor. This is needed to order x-axis of plots later.</p>
+<pre class="r"><code>fatalAvg$EVTYPESTD &lt;- factor(fatalAvg$EVTYPESTD, levels=fatalAvg$EVTYPESTD)
+injuryAvg$EVTYPESTD &lt;- factor(injuryAvg$EVTYPESTD, levels=injuryAvg$EVTYPESTD)
+dmgAvg$EVTYPESTD &lt;- factor(dmgAvg$EVTYPESTD, levels=dmgAvg$EVTYPESTD)</code></pre>
+</div>
+</div>
+<div id="results" class="section level2">
+<h2>Results</h2>
+<div id="fatalities" class="section level3">
+<h3>Fatalities</h3>
+<p>Taking a look at the average number of fatalities each year, we see that excessive heat is the deadliest with 112 deaths per year on average. Tornadoes are a close second with 94 deaths and flash floods are a distant third with 55 deaths per year on average.</p>
+<pre class="r"><code>qplot(x=fatalAvg$EVTYPESTD, y=fatalAvg$FATALITIES, geom=&quot;bar&quot;, stat=&quot;identity&quot;,
+      xlab=&quot;Event&quot;, ylab=&quot;Avg Deaths per Year&quot;)</code></pre>
+<p><img src="storms_files/figure-html/unnamed-chunk-21-1.png" /></p>
+</div>
+<div id="injuries" class="section level3">
+<h3>Injuries</h3>
+<p>In terms of injuries, tornadoes are far and away the most dangerous with 1,291 injuries per year on average. Floods are in second place with 427 injuries.</p>
+<pre class="r"><code>qplot(x=injuryAvg$EVTYPESTD, y=injuryAvg$INJURIES, geom=&quot;bar&quot;, stat=&quot;identity&quot;,
+      xlab=&quot;Event&quot;, ylab=&quot;Avg Injuries per Year&quot;)</code></pre>
+<p><img src="storms_files/figure-html/unnamed-chunk-22-1.png" /></p>
+</div>
+<div id="damage" class="section level3">
+<h3>Damage</h3>
+<p>Turning to the economic impact of storm events, floods are number one, causing on average $11.26 billion of damage per year. Hurricanes are second, causing on average $7.71 billion of damage per year. Interestingly, the top three events are all water-based.</p>
+<pre class="r"><code>qplot(x=dmgAvg$EVTYPESTD, y=dmgAvg$DMGREAL, geom=&quot;bar&quot;, stat=&quot;identity&quot;,
+      xlab=&quot;Event&quot;, ylab=&quot;Avg Cost of Damage per Year ($ millions)&quot;)</code></pre>
+<p><img src="storms_files/figure-html/unnamed-chunk-23-1.png" /></p>
+<p>In summary, excessive heat is the most deadly, tornadoes are the most dangerous, and floods are the most damaging to property and crops each year in the United States on average.</p>
+</div>
+</div>
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+$(document).ready(function () {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+});
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
